@@ -133,14 +133,32 @@ def do_fetch(which):
                 val = ac.get('messages', 'U') if ac else 'U'
             print(f"msg_{tech}.value {val}")
 
-    elif which == 'cpu':
+elif which == 'cpu':
         for tech, path in DATA_SOURCES.items():
             s = get_json(path, 'stats.json')
+            val = "U"
+            
+            # Strategy 1: Internal app stats (Best for 1090)
             if s and 'last5min' in s:
-                cpu = s['last5min']['cpu']
-                val = (cpu['demod'] + cpu['reader'] + cpu['background']) / 3000.0
-                print(f"cpu_{tech}.value {val:.3f}")
-            else: print(f"cpu_{tech}.value U")
+                cpu = s['last5min'].get('cpu', {})
+                val = (cpu.get('demod', 0) + cpu.get('reader', 0) + cpu.get('background', 0)) / 3000.0
+            
+            # Strategy 2: Linux Kernel Process Stats (Reliable for 978/Standalone)
+            if val == "U" or val == 0 or val == 0.0:
+                try:
+                    # Search for the most common process names for 978 decoders
+                    search_names = ["dump1090-fa"] if tech == '1090' else ["dump978-fa", "skyaware978"]
+                    for proc in search_names:
+                        cmd = f"ps -C {proc} -o %cpu --no-headers"
+                        cpu_output = os.popen(cmd).read().strip()
+                        if cpu_output:
+                            # Sum up usage if there are multiple threads/processes
+                            val = sum(float(x) for x in cpu_output.split())
+                            break # Found it, stop searching
+                except:
+                    val = "U"
+            
+            print(f"cpu_{tech}.value {val}")
 
 if __name__ == '__main__':
     name = os.path.basename(sys.argv[0])
