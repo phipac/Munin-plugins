@@ -133,7 +133,7 @@ def do_fetch(which):
                 val = ac.get('messages', 'U') if ac else 'U'
             print(f"msg_{tech}.value {val}")
 
-elif which == 'cpu':
+    elif which == 'cpu':
         for tech, path in DATA_SOURCES.items():
             s = get_json(path, 'stats.json')
             val = "U"
